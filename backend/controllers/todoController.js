@@ -2,7 +2,14 @@ const Todo = require('../models/Todo');
 
 const getTodos = async (req, res) => {
   try {
-    const todos = await Todo.find().sort({ createdAt: -1 });
+    const filter = {};
+    const doneParam = req.query.done;
+
+    if (doneParam === 'true' || doneParam === 'false') {
+      filter.done = doneParam === 'true';
+    }
+
+    const todos = await Todo.find(filter).sort({ createdAt: -1 });
     res.json(todos);
   } catch (err) {
     res.status(500).json({ error: 'Server error' });

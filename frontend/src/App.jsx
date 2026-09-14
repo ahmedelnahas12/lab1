@@ -1,9 +1,15 @@
 // App.jsx
 import { useState, useEffect } from 'react';
-import TodoForm from './TodoForm';
-import TodoList from './TodoList';
+import TodoForm from './todoForm';
+import TodoList from './todoList';
 import { fetchTodos, createTodo, updateTodo, deleteTodo } from './api/todos';
 import './todo.css';
+
+const FILTERS = [
+  { key: 'all', label: 'All' },
+  { key: 'active', label: 'Active' },
+  { key: 'done', label: 'Done' },
+];
 
 const today = new Date().toLocaleDateString(undefined, {
   weekday: 'long',
@@ -14,31 +20,43 @@ const today = new Date().toLocaleDateString(undefined, {
 export default function App() {
   const [todos, setTodos] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [currentFilter, setCurrentFilter] = useState('all');
+
+  const loadTodos = async () => {
+    setLoading(true);
+
+    try {
+      const data = await fetchTodos(currentFilter);
+      setTodos(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    fetchTodos()
-      .then(data => { setTodos(data); setLoading(false); })
-      .catch(err => { console.error(err); setLoading(false); });
-  }, []);
+    loadTodos();
+  }, [currentFilter]);
 
   const handleAdd = async (title) => {
-    const newTodo = await createTodo(title);
-    setTodos([newTodo, ...todos]);
+    await createTodo(title);
+    await loadTodos();
   };
 
   const handleToggle = async (id, done) => {
-    const updated = await updateTodo(id, { done: !done });
-    setTodos(todos.map(t => t._id === id ? updated : t));
+    await updateTodo(id, { done: !done });
+    await loadTodos();
   };
 
   const handleRename = async (id, title) => {
-    const updated = await updateTodo(id, { title });
-    setTodos(todos.map(t => t._id === id ? updated : t));
+    await updateTodo(id, { title });
+    await loadTodos();
   };
 
   const handleRemove = async (id) => {
     await deleteTodo(id);
-    setTodos(todos.filter(t => t._id !== id));
+    await loadTodos();
   };
 
   return (
@@ -48,6 +66,19 @@ export default function App() {
           <span className="stamp">Tasks</span>
           <p className="receipt-date">{today}</p>
         </header>
+
+        <div className="todo-filters" aria-label="Todo filters">
+          {FILTERS.map(({ key, label }) => (
+            <button
+              key={key}
+              type="button"
+              className={currentFilter === key ? 'filter-btn active' : 'filter-btn'}
+              onClick={() => setCurrentFilter(key)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
 
         <TodoForm onAdd={handleAdd} />
         <TodoList
